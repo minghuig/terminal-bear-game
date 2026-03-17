@@ -215,7 +215,7 @@ use crate::bear::{AgeStage, Bear};
 use crate::events::EventRecord;
 use crate::time::Season;
 
-pub fn build_relax_prompt(bear: &Bear, season: Season, year: u32, theme_key: &str, follow_up: Option<&str>) -> String {
+pub fn build_relax_prompt(bear: &Bear, season: Season, year: u32, theme_key: &str, follow_up: Option<&str>, relax_bond: bool) -> String {
     let season_desc = match season {
         Season::Spring => "Spring: the world is thawing, cold and fresh.",
         Season::Summer => "Summer: warm, unhurried, the days are long.",
@@ -226,6 +226,15 @@ pub fn build_relax_prompt(bear: &Bear, season: Season, year: u32, theme_key: &st
     let follow_up_line = match follow_up {
         Some(prev) => format!("This is a returning scene — the bear has been here before. Previously: {prev}. Write a natural continuation, not a repeat.\n"),
         None => String::new(),
+    };
+
+    let benefit_instruction = if relax_bond {
+        "Your person is quietly present with the bear during this moment. The scene includes both of you — unhurried, no agenda, just sharing the space.\n\
+        End with: [Bond +X] where X is 2–5 depending on how connected the moment feels.\n\
+        Only use Bond. Do not include Fat or Energy."
+    } else {
+        "The bear grazes or nibbles on something small during this moment. End with: [Fat +X] where X is 2–5.\n\
+        Only use Fat. Do not include Energy or Bond."
     };
 
     format!(
@@ -239,9 +248,7 @@ pub fn build_relax_prompt(bear: &Bear, season: Season, year: u32, theme_key: &st
         Write a 3-5 sentence scene of this peaceful moment.\n\
         Second person (\"you\"). Calm, sensory, unhurried — focus on what the bear sees, smells, feels.\n\
         No tension, no decisions, no drama. Just the bear being.\n\
-        If the scene naturally includes any incidental eating, end with: [Fat +X] where X is 2–5.\n\
-        Otherwise end with: []\n\
-        About half of scenes should include incidental eating. Only use Fat. Do not include Energy.\n\
+        {benefit_instruction}\n\
         Then on the very last line: [SUMMARY: one sentence in past tense describing what happened]",
         name = bear.name,
         season = season.label(),
@@ -545,9 +552,9 @@ pub fn parse_event_response(raw: &str) -> ParsedEvent {
     for line in choices_part.lines() {
         let line = line.trim();
         if line.starts_with("A)") {
-            choice_a_text = line[2..].trim().to_string();
+            choice_a_text = line[2..].trim().trim_start_matches('<').trim_end_matches('>').trim().to_string();
         } else if line.starts_with("B)") {
-            choice_b_text = line[2..].trim().to_string();
+            choice_b_text = line[2..].trim().trim_start_matches('<').trim_end_matches('>').trim().to_string();
         } else if line.starts_with("[A_RESULT:") {
             result_a_raw = line.to_string();
         } else if line.starts_with("[B_RESULT:") {

@@ -213,35 +213,57 @@ impl App {
         match self.save.time.season {
             Season::Spring => 0.5, // walking hibernation — slow to rebuild
             Season::Summer => 1.0,
-            Season::Fall => 2.0,   // hyperphagia — body absorbs fat rapidly
+            Season::Fall => 1.5,   // hyperphagia — body absorbs fat rapidly
             Season::Winter => 1.0,
         }
     }
 
-    /// If the bear was missing, clear the flag and notify. Returns true if the
-    /// bear just returned (caller should show message and skip the action).
-    fn check_bear_returns(&mut self) -> bool {
-        if self.save.bear_missing {
-            self.save.bear_missing = false;
+    /// Block all actions while the bear is missing. Returns true if blocked.
+    fn bear_is_missing(&mut self) -> bool {
+        if self.save.bear_missing_turns > 0 {
             self.message = Some(format!(
-                "{} has returned. They seem distant.",
-                self.save.bear.name
+                "{} is still gone. Press [w] to wait a day ({} left).",
+                self.save.bear.name, self.save.bear_missing_turns
             ));
-            self.auto_save();
             return true;
         }
         false
     }
 
+    /// Advance one day while the bear is missing. Returns when bear comes back.
+    pub fn action_wait(&mut self) {
+        if self.save.bear_missing_turns == 0 { return; }
+        self.advance_day_and_check();
+        // Hibernation may have fired and cleared missing — check first
+        if self.save.bear_missing_turns > 0 {
+            self.save.bear_missing_turns -= 1;
+            if self.save.bear_missing_turns == 0 {
+                self.save.bear.hunger = 20.0;
+                self.save.bear.clamp_stats();
+                self.message = Some(format!(
+                    "{} has returned. {} seems distant.",
+                    self.save.bear.name,
+                    {
+                        let s = self.save.bear.pronoun.subject();
+                        let mut c = s.chars();
+                        match c.next() {
+                            None => String::new(),
+                            Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+                        }
+                    },
+                ));
+            }
+        }
+        self.auto_save();
+    }
+
     pub fn action_feed(&mut self) {
-        if self.check_bear_returns() { return; }
         if self.save.food_inventory == 0 {
             self.message = Some("No food left. Go fish or forage!".to_string());
             return;
         }
         self.save.food_inventory -= 1;
         self.save.bear.feed(20.0, self.season_fat_multiplier());
-        self.save.bear.bond = (self.save.bear.bond + 1.0).min(100.0);
         self.message = Some(format!(
             "{} eats hungrily. ({} food left)",
             self.save.bear.name, self.save.food_inventory
@@ -250,7 +272,6 @@ impl App {
     }
 
     pub fn action_interact(&mut self) {
-        if self.check_bear_returns() { return; }
         if self.save.bear.is_exhausted() {
             self.message = Some(format!("{} is too exhausted. Take a nap first.", self.save.bear.name));
             return;
@@ -384,7 +405,6 @@ impl App {
 
 
     pub fn action_relax(&mut self) {
-        if self.check_bear_returns() { return; }
         let pool = EventTheme::pool_for_relax(self.save.time.season, self.save.bear.bond);
         let recent: Vec<String> = self.save.event_log
             .iter().rev().take(4)
@@ -400,7 +420,8 @@ impl App {
 
         let theme_key = theme.key().to_string();
         let follow_up = find_previous_summary(&self.save.event_log, &theme_key).map(|s| s.to_string());
-        let prompt = build_relax_prompt(&self.save.bear, self.save.time.season, self.save.time.year, &theme_key, follow_up.as_deref());
+        let relax_bond = self.save.event_log.len() % 2 == 0;
+        let prompt = build_relax_prompt(&self.save.bear, self.save.time.season, self.save.time.year, &theme_key, follow_up.as_deref(), relax_bond);
         let season = self.save.time.season;
         let year = self.save.time.year;
         let day = self.save.time.day;
@@ -431,8 +452,7 @@ impl App {
     }
 
     pub fn action_nap(&mut self) {
-        if self.check_bear_returns() { return; }
-        self.save.bear.energy += 40.0;
+        self.save.bear.energy += 30.0;
         self.save.bear.clamp_stats();
         self.message = Some(format!(
             "{} naps peacefully. (day passes)",
@@ -443,7 +463,6 @@ impl App {
     }
 
     fn run_day_action(&mut self, action: &str) {
-        if self.check_bear_returns() { return; }
         let recent: Vec<String> = self.save.event_log
             .iter().rev().take(4)
             .map(|e| e.theme_key.clone())
@@ -552,7 +571,7 @@ impl App {
             let deltas = parse_stat_deltas(&e.narrative);
             let fat_mult = match e.season {
                 Season::Spring => 0.5,
-                Season::Fall => 2.0,
+                Season::Fall => 1.5,
                 _ => 1.0,
             };
             let fat = deltas.fat * fat_mult;
@@ -660,15 +679,17 @@ impl App {
             self.save.hibernation_ready = true;
         }
 
-        self.save.bear.daily_decay(self.save.time.season);
+        // Skip stat decay while bear is away — they're fending for themselves
+        if self.save.bear_missing_turns == 0 {
+            self.save.bear.daily_decay(self.save.time.season);
+        }
 
-        if self.save.bear.is_gone() {
-            self.save.bear.hunger = 20.0;
+        if self.save.bear_missing_turns == 0 && self.save.bear.is_gone() {
             self.save.bear.bond = (self.save.bear.bond - 30.0).max(0.0);
             self.save.bear.clamp_stats();
-            self.save.bear_missing = true;
+            self.save.bear_missing_turns = 3;
             self.message = Some(format!(
-                "{} wandered off to find food. Bond suffered.",
+                "{} wandered off to find food. Bond suffered. Press [w] to wait.",
                 self.save.bear.name
             ));
             return;
@@ -689,6 +710,7 @@ impl App {
     }
 
     fn do_hibernation(&mut self, success: bool) {
+        self.save.bear_missing_turns = 0; // bear comes home for winter regardless
         // At age 25, the bear doesn't wake up
         if self.save.bear.age_years >= 20 {
             self.save.hibernation_ready = false;

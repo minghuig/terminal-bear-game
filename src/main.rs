@@ -265,6 +265,23 @@ fn handle_home(app: &mut App, key: KeyCode) {
     }
 
     app.message = None;
+
+    // While bear is missing, only [w] and [q]/[s] work
+    if app.save.bear_missing_turns > 0 {
+        match key {
+            KeyCode::Char('w') => app.action_wait(),
+            KeyCode::Char('q') => std::process::exit(0),
+            KeyCode::Char('s') => app.go_to_settings(),
+            _ => {
+                app.message = Some(format!(
+                    "{} is gone. Press [w] to wait a day.",
+                    app.save.bear.name
+                ));
+            }
+        }
+        return;
+    }
+
     match key {
         KeyCode::Char('q') => std::process::exit(0),
 

@@ -21,8 +21,8 @@ You care for a brown bear from cubhood to old age across up to 20 years. Each ye
 **Stats to manage:**
 - **Hunger** — feed your bear or it will leave
 - **Energy** — low energy blocks most actions
-- **Fat reserves** — must reach 200 before winter for a successful hibernation
-- **Bond** — built through feeding, talking, and interacting; decays daily
+- **Fat reserves** — must reach a threshold before winter for a successful hibernation
+- **Bond** — built through talking and interacting; decays daily
 - **Fishing skill** — improves with practice; increases fish yield
 
 **Life stages:** Cub (1–2) → Adolescent (3–5) → Adult (6–16) → Elder (17–20)
@@ -56,7 +56,7 @@ bear_game
 
 ## LLM Setup
 
-On first launch, press `[s]` from the home screen to open Settings and enter your API key. You can switch between Anthropic (Claude) and OpenAI (GPT) at any time. The key is saved locally in `bear_save.json` (gitignored).
+The game will prompt you to choose a provider and enter your API key on first launch. You can change it later via `[s]` (Settings) from the home screen. The key is saved locally in `bear_save.json` (gitignored).
 
 ## Save File
 

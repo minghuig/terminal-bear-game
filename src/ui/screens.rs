@@ -6,6 +6,7 @@ use ratatui::{
 };
 
 use crate::app::App;
+use crate::art::bear_sleep_art;
 
 pub fn render_main_menu(_app: &App, frame: &mut Frame) {
     let area = frame.area();
@@ -121,16 +122,16 @@ pub fn render_hibernation(app: &App, frame: &mut Frame, success: bool, bond_at_s
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(25),
-            Constraint::Length(12),
+            Constraint::Percentage(15),
             Constraint::Min(0),
         ])
         .split(area);
 
     let name = &app.save.bear.name;
     let age = app.save.bear.age_years;
+    let sleep_art = bear_sleep_art(&app.save.bear.age_stage());
 
-    let (art, msg) = if success {
+    let (season_text, msg) = if success {
         let bond_note = if bond_at_sleep >= 70.0 {
             format!("Before settling in, {} turned and pressed {}'s nose against your hand.\nThen curled up and was still.", name, name)
         } else if bond_at_sleep >= 40.0 {
@@ -139,16 +140,7 @@ pub fn render_hibernation(app: &App, frame: &mut Frame, success: bool, bond_at_s
             format!("{} found a hollow and disappeared inside without ceremony.", name)
         };
         (
-            r#"
-   ╭━━━━━━━╮
- ╭╯ ─     ─ ╰╮
- │  ░ ─ ─ ░  │   z z z
- │           │
- ╰━━━━━━━━━━╯
-
-  ~ Winter passes ~
-  ~ Spring arrives ~
-"#,
+            "~ Winter passes ~\n  ~ Spring arrives ~",
             format!(
                 "{}\n\nWoke up a little hungry, but ready for spring.\n\nYear {} begins.",
                 bond_note, age
@@ -156,16 +148,7 @@ pub fn render_hibernation(app: &App, frame: &mut Frame, success: bool, bond_at_s
         )
     } else {
         (
-            r#"
-   ╭━━━━━━━╮
- ╭╯ ─     ─ ╰╮
- │  ░ ─ ─ ░  │   z..z
- │           │
- ╰━━━━━━━━━━╯
-
-  ~ A hard winter ~
-  ~ Spring arrives ~
-"#,
+            "~ A hard winter ~\n  ~ Spring arrives ~",
             format!(
                 "{} didn't have enough fat for a good hibernation.\nWoke up thin and weak. This spring will be tough.\n\nYear {} begins.",
                 name, age
@@ -175,15 +158,15 @@ pub fn render_hibernation(app: &App, frame: &mut Frame, success: bool, bond_at_s
 
     let color = if success { Color::Cyan } else { Color::Red };
 
-    let screen = Paragraph::new(format!("{}\n{}", art, msg))
+    let screen = Paragraph::new(format!("{}\n  {}\n\n{}", sleep_art, season_text, msg))
         .alignment(Alignment::Center)
         .style(Style::default().fg(color).add_modifier(Modifier::BOLD));
-    frame.render_widget(screen, chunks[1]);
+    frame.render_widget(screen, chunks[0]);
 
     let hint = Paragraph::new(" [Enter / Esc] Wake up")
         .alignment(Alignment::Center)
         .style(Style::default().fg(Color::DarkGray));
-    frame.render_widget(hint, chunks[2]);
+    frame.render_widget(hint, chunks[1]);
 }
 
 pub fn render_final_rest(app: &App, frame: &mut Frame) {

@@ -57,11 +57,13 @@ pub fn render_home(app: &App, frame: &mut Frame) {
         .split(rows[1]);
 
     // Bear art panel (or missing message)
-    let bear_panel = if app.save.bear_missing {
+    let bear_panel = if app.save.bear_missing_turns > 0 {
         Paragraph::new(format!(
-            "\n\n\n\n\n  {} has wandered off.\n\n  {}'ll return when\n  you next take an action.",
+            "\n\n\n\n\n  {} has wandered off.\n\n  Press [w] to wait a day.\n  ({} day{} until {} returns.)",
             app.save.bear.name,
-            capitalize(app.save.bear.pronoun.subject()),
+            app.save.bear_missing_turns,
+            if app.save.bear_missing_turns == 1 { "" } else { "s" },
+            app.save.bear.pronoun.subject(),
         ))
         .block(
             Block::default()
