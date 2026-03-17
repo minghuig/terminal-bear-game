@@ -7,10 +7,12 @@ use crate::events::{EventRecord, EventTheme};
 use crate::llm::{
     EventChoice, LlmClient, LlmProvider, build_dialogue_prompt, build_event_prompt,
     build_interact_prompt, build_relax_prompt, build_simple_event_prompt, extract_summary,
-    create_client, parse_dialogue_response, parse_event_response, parse_stat_deltas,
+    find_previous_summary, create_client, parse_dialogue_response, parse_event_response, parse_stat_deltas,
 };
 use crate::persistence::{DialogueEntry, SaveState};
 use crate::time::{DayAdvanceResult, Season, FAT_THRESHOLD_FOR_HIBERNATION};
+
+const RELAX_ENERGY: f32 = 20.0;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Screen {
@@ -107,7 +109,7 @@ impl App {
         let mut app = App::new();
         if let Some(save) = SaveState::load()? {
             app.save = save;
-            if app.save.api_key.is_some() {
+            if app.save.api_key.is_some() && app.save.llm_provider.is_some() {
                 app.rebuild_llm();
                 app.screen = Screen::Home;
             } else {
@@ -216,14 +218,30 @@ impl App {
         }
     }
 
+    /// If the bear was missing, clear the flag and notify. Returns true if the
+    /// bear just returned (caller should show message and skip the action).
+    fn check_bear_returns(&mut self) -> bool {
+        if self.save.bear_missing {
+            self.save.bear_missing = false;
+            self.message = Some(format!(
+                "{} has returned. They seem distant.",
+                self.save.bear.name
+            ));
+            self.auto_save();
+            return true;
+        }
+        false
+    }
+
     pub fn action_feed(&mut self) {
+        if self.check_bear_returns() { return; }
         if self.save.food_inventory == 0 {
             self.message = Some("No food left. Go fish or forage!".to_string());
             return;
         }
         self.save.food_inventory -= 1;
         self.save.bear.feed(20.0, self.season_fat_multiplier());
-        self.save.bear.bond = (self.save.bear.bond + 3.0).min(100.0);
+        self.save.bear.bond = (self.save.bear.bond + 1.0).min(100.0);
         self.message = Some(format!(
             "{} eats hungrily. ({} food left)",
             self.save.bear.name, self.save.food_inventory
@@ -232,6 +250,7 @@ impl App {
     }
 
     pub fn action_interact(&mut self) {
+        if self.check_bear_returns() { return; }
         if self.save.bear.is_exhausted() {
             self.message = Some(format!("{} is too exhausted. Take a nap first.", self.save.bear.name));
             return;
@@ -251,7 +270,8 @@ impl App {
 
         let is_choice = self.save.event_log.len() % 2 == 0;
         let theme_key = theme.key().to_string();
-        let prompt = build_interact_prompt(&self.save.bear, &theme_key, is_choice);
+        let follow_up = find_previous_summary(&self.save.event_log, &theme_key).map(|s| s.to_string());
+        let prompt = build_interact_prompt(&self.save.bear, &theme_key, is_choice, follow_up.as_deref());
 
         let season = self.save.time.season;
         let year = self.save.time.year;
@@ -266,13 +286,12 @@ impl App {
         thread::spawn(move || {
             let result = (|| -> Result<PendingResult> {
                 let raw = llm.complete(prompt)?;
-                let (narrative, choices, summary) = if is_choice {
-                    let parsed = parse_event_response(&raw);
-                    let (text_no_summary, summary) = extract_summary(&parsed.narrative);
-                    (text_no_summary, parsed.choices, summary)
+                let (raw_no_summary, summary) = extract_summary(&raw);
+                let (narrative, choices) = if is_choice {
+                    let parsed = parse_event_response(&raw_no_summary);
+                    (parsed.narrative, parsed.choices)
                 } else {
-                    let (text, summary) = extract_summary(&raw);
-                    (text, None, summary)
+                    (raw_no_summary, None)
                 };
                 Ok(PendingResult::Event(PendingEventResult {
                     narrative,
@@ -365,6 +384,7 @@ impl App {
 
 
     pub fn action_relax(&mut self) {
+        if self.check_bear_returns() { return; }
         let pool = EventTheme::pool_for_relax(self.save.time.season, self.save.bear.bond);
         let recent: Vec<String> = self.save.event_log
             .iter().rev().take(4)
@@ -379,7 +399,8 @@ impl App {
         };
 
         let theme_key = theme.key().to_string();
-        let prompt = build_relax_prompt(&self.save.bear, self.save.time.season, self.save.time.year, &theme_key);
+        let follow_up = find_previous_summary(&self.save.event_log, &theme_key).map(|s| s.to_string());
+        let prompt = build_relax_prompt(&self.save.bear, self.save.time.season, self.save.time.year, &theme_key, follow_up.as_deref());
         let season = self.save.time.season;
         let year = self.save.time.year;
         let day = self.save.time.day;
@@ -410,6 +431,7 @@ impl App {
     }
 
     pub fn action_nap(&mut self) {
+        if self.check_bear_returns() { return; }
         self.save.bear.energy += 40.0;
         self.save.bear.clamp_stats();
         self.message = Some(format!(
@@ -421,6 +443,7 @@ impl App {
     }
 
     fn run_day_action(&mut self, action: &str) {
+        if self.check_bear_returns() { return; }
         let recent: Vec<String> = self.save.event_log
             .iter().rev().take(4)
             .map(|e| e.theme_key.clone())
@@ -440,6 +463,7 @@ impl App {
         };
 
         let past = self.save.event_log.clone();
+        let follow_up = find_previous_summary(&past, theme.key()).map(|s| s.to_string());
 
         // 50/50 choice vs simple, alternating based on event count + day
         let is_choice = self.save.event_log.len() % 2 == 0;
@@ -447,12 +471,12 @@ impl App {
         let prompt = if is_choice {
             build_event_prompt(
                 &self.save.bear, self.save.time.season, self.save.time.year,
-                action, theme.key(), &past,
+                action, theme.key(), &past, follow_up.as_deref(),
             )
         } else {
             build_simple_event_prompt(
                 &self.save.bear, self.save.time.season, self.save.time.year,
-                action, theme.key(), &past,
+                action, theme.key(), &past, follow_up.as_deref(),
             )
         };
 
@@ -470,13 +494,12 @@ impl App {
         thread::spawn(move || {
             let result = (|| -> Result<PendingResult> {
                 let raw = llm.complete(prompt)?;
-                let (narrative, choices, summary) = if is_choice {
-                    let parsed = parse_event_response(&raw);
-                    let (text_no_summary, summary) = extract_summary(&parsed.narrative);
-                    (text_no_summary, parsed.choices, summary)
+                let (raw_no_summary, summary) = extract_summary(&raw);
+                let (narrative, choices) = if is_choice {
+                    let parsed = parse_event_response(&raw_no_summary);
+                    (parsed.narrative, parsed.choices)
                 } else {
-                    let (text, summary) = extract_summary(&raw);
-                    (text, None, summary)
+                    (raw_no_summary, None)
                 };
                 Ok(PendingResult::Event(PendingEventResult {
                     narrative,
@@ -506,12 +529,21 @@ impl App {
             ));
         }
 
+        // Check hibernation readiness before event stats are applied, so that
+        // events which drain fat don't prevent a bear that entered the day at
+        // threshold from being marked ready.
+        if self.save.time.season == Season::Fall
+            && self.save.bear.fat_reserves >= FAT_THRESHOLD_FOR_HIBERNATION
+        {
+            self.save.hibernation_ready = true;
+        }
+
         if e.action == "fish" {
             self.save.bear.fishing_skill += 0.02;
             self.save.bear.clamp_stats();
         }
         if e.action == "relax" {
-            self.save.bear.energy += 20.0;
+            self.save.bear.energy += RELAX_ENERGY;
             self.save.bear.clamp_stats();
         }
 
@@ -536,7 +568,7 @@ impl App {
             self.save.bear.clamp_stats();
 
             let mut effects: Vec<String> = Vec::new();
-            if e.action == "relax"  { effects.push("Energy +15".to_string()); }
+            if e.action == "relax"  { effects.push(format!("Energy +{}", RELAX_ENERGY as i32)); }
             if deltas.bond != 0.0   { effects.push(format!("Bond {:+.0}", deltas.bond)); }
             if deltas.energy != 0.0 { effects.push(format!("Energy {:+.0}", deltas.energy)); }
             if fat != 0.0           { effects.push(format!("Fat {:+.0}", fat)); }
@@ -550,16 +582,22 @@ impl App {
         } else {
             self.event_text = Some(e.narrative);
         }
+        let is_choice = e.choices.is_some();
         self.event_choices = e.choices;
         self.event_choice_made = false;
         self.current_event_action = e.action.clone();
         self.screen = Screen::Event;
 
-        self.advance_day_and_check();
+        // For choice events, defer advance_day_and_check until after the player
+        // picks — so choice stats (bond, fat, etc.) are applied before daily
+        // decay and hibernation logic runs.
+        if !is_choice {
+            self.advance_day_and_check();
 
-        if self.screen != Screen::Event {
-            self.next_screen = Some(self.screen.clone());
-            self.screen = Screen::Event;
+            if self.screen != Screen::Event {
+                self.next_screen = Some(self.screen.clone());
+                self.screen = Screen::Event;
+            }
         }
 
         self.auto_save();
@@ -603,6 +641,14 @@ impl App {
 
         self.event_text = Some(format!("{}{}", choice.outcome_text, effects_line));
         self.event_choice_made = true;
+
+        self.advance_day_and_check();
+
+        if self.screen != Screen::Event {
+            self.next_screen = Some(self.screen.clone());
+            self.screen = Screen::Event;
+        }
+
         self.auto_save();
     }
 
@@ -617,7 +663,14 @@ impl App {
         self.save.bear.daily_decay(self.save.time.season);
 
         if self.save.bear.is_gone() {
-            self.screen = Screen::GameOver;
+            self.save.bear.hunger = 20.0;
+            self.save.bear.bond = (self.save.bear.bond - 30.0).max(0.0);
+            self.save.bear.clamp_stats();
+            self.save.bear_missing = true;
+            self.message = Some(format!(
+                "{} wandered off to find food. Bond suffered.",
+                self.save.bear.name
+            ));
             return;
         }
 
@@ -655,11 +708,11 @@ impl App {
             self.save.bear.fat_reserves = 5.0;
             self.save.bear.hunger = 20.0;
             self.save.bear.energy = 40.0;
-            self.save.bear.bond -= 10.0;
+            self.save.bear.bond -= 30.0;
         }
 
         // Six months of sleep — bond and skills fade
-        self.save.bear.bond = (self.save.bear.bond - 35.0).max(0.0);
+        self.save.bear.bond = (self.save.bear.bond - 20.0).max(0.0);
         self.save.bear.fishing_skill = (self.save.bear.fishing_skill - 0.1).max(0.0);
         self.save.hibernation_ready = false;
 

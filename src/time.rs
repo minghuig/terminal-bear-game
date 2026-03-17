@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub const DAYS_PER_SEASON: u32 = 10;
 pub const SEASONS_PER_YEAR: u32 = 4;
-pub const FAT_THRESHOLD_FOR_HIBERNATION: f32 = 200.0;
+pub const FAT_THRESHOLD_FOR_HIBERNATION: f32 = 180.0;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum Season {

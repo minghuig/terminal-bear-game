@@ -16,9 +16,7 @@ pub enum EventTheme {
     ElkCarcass,
     ForestFireSmell,
 
-    // Universal follow-ups (require prerequisite in event log)
-    FamiliarBearReturns, // requires: other_bear
-    CubsAtPlay,          // requires: other_cubs
+    CubsAtPlay,
 
     // ── Season-specific universal ─────────────────────────────────────────────
     SpringFloodCrossing,      // spring
@@ -50,6 +48,7 @@ pub enum EventTheme {
     BearFight,          // choice: stand ground vs back down
 
     // Adult + Elder
+    TrophyHunters,      // tense — must escape human hunters
     OldScratchMarks,
 
     // Elder
@@ -65,8 +64,10 @@ pub enum EventTheme {
     RiverCrossing,
     EagleStealsYourCatch,
     OtterCompetition,
-    SalmonFrenzy,  // fall only
-    IcyRapids,    // spring only
+    SalmonFrenzy,      // fall only
+    IcyRapids,         // spring only
+    WaterfallFishing,  // catching salmon leaping up a waterfall
+    HeronRivalry,      // stealing fish from a heron
 
     // ── Forage-specific ───────────────────────────────────────────────────────
     BerryPatch,
@@ -82,6 +83,8 @@ pub enum EventTheme {
     DiggingRoots,    // forage
 
     // ── Explore-specific ──────────────────────────────────────────────────────
+    TreeClimbing,      // explore, cub/adolescent only
+    RuttingElk,        // fall only — bulls sparring, bugling
     CaveDiscovery,
     FoxFollowing,
     MotherMooseWarning, // spring, summer
@@ -95,6 +98,8 @@ pub enum EventTheme {
 
     // ── Relax-specific ────────────────────────────────────────────────────────
     ScenicRest,
+    BeachRest,          // lounging on the beach
+    Stargazing,         // clear night, open sky
     NapInMeadow,
     WhalesFromShore,    // summer, fall
     Aurora,             // spring, fall
@@ -110,6 +115,7 @@ pub enum EventTheme {
     RainUnderTree,
 
     // ── Forage + Explore ──────────────────────────────────────────────────────
+    WolfKill,           // forage, explore — wolves may or may not still be there
     MarmotHunt,         // forage, explore
     SnowshoeHare,       // forage, explore — higher weight spring/winter
     WeaselEncounter,    // forage, explore
@@ -163,7 +169,6 @@ impl EventTheme {
             EventTheme::WhaleCarcass,
             EventTheme::ElkCarcass,
             EventTheme::ForestFireSmell,
-            EventTheme::FamiliarBearReturns,
             EventTheme::CubsAtPlay,
             EventTheme::SpringFloodCrossing,
             EventTheme::GetLost,
@@ -184,6 +189,7 @@ impl EventTheme {
             EventTheme::MotherWithNewborns,
             EventTheme::RiverStandoff,
             EventTheme::BearFight,
+            EventTheme::TrophyHunters,
             EventTheme::OldScratchMarks,
             EventTheme::OldMemory,
             EventTheme::SlowerNow,
@@ -197,6 +203,8 @@ impl EventTheme {
             EventTheme::OtterCompetition,
             EventTheme::SalmonFrenzy,
             EventTheme::IcyRapids,
+            EventTheme::WaterfallFishing,
+            EventTheme::HeronRivalry,
             EventTheme::BerryPatch,
             EventTheme::GrubsUnderLog,
             EventTheme::BeehiveDiscovery,
@@ -208,6 +216,8 @@ impl EventTheme {
             EventTheme::WildOnions,
             EventTheme::TidepoolShellfish,
             EventTheme::DiggingRoots,
+            EventTheme::TreeClimbing,
+            EventTheme::RuttingElk,
             EventTheme::CaveDiscovery,
             EventTheme::HotSpring,
             EventTheme::ViewFromCliff,
@@ -221,6 +231,8 @@ impl EventTheme {
             EventTheme::CaribouHerd,
             EventTheme::DallSheep,
             EventTheme::ScenicRest,
+            EventTheme::BeachRest,
+            EventTheme::Stargazing,
             EventTheme::NapInMeadow,
             EventTheme::WhalesFromShore,
             EventTheme::Aurora,
@@ -232,6 +244,7 @@ impl EventTheme {
             EventTheme::WatchingStorm,
             EventTheme::Waterfall,
             EventTheme::RainUnderTree,
+            EventTheme::WolfKill,
             EventTheme::MarmotHunt,
             EventTheme::SnowshoeHare,
             EventTheme::WeaselEncounter,
@@ -271,7 +284,6 @@ impl EventTheme {
             EventTheme::WhaleCarcass => "whale_carcass",
             EventTheme::ElkCarcass => "elk_carcass",
             EventTheme::ForestFireSmell => "forest_fire",
-            EventTheme::FamiliarBearReturns => "familiar_bear",
             EventTheme::CubsAtPlay => "cubs_at_play",
             EventTheme::SpringFloodCrossing => "spring_flood",
             EventTheme::GetLost => "get_lost",
@@ -292,6 +304,7 @@ impl EventTheme {
             EventTheme::MotherWithNewborns => "mother_with_newborns",
             EventTheme::RiverStandoff => "river_standoff",
             EventTheme::BearFight => "bear_fight",
+            EventTheme::TrophyHunters => "trophy_hunters",
             EventTheme::OldScratchMarks => "old_scratch_marks",
             EventTheme::OldMemory => "old_memory",
             EventTheme::SlowerNow => "slower_now",
@@ -305,6 +318,8 @@ impl EventTheme {
             EventTheme::OtterCompetition => "otter_competition",
             EventTheme::SalmonFrenzy => "salmon_frenzy",
             EventTheme::IcyRapids => "icy_rapids",
+            EventTheme::WaterfallFishing => "waterfall_fishing",
+            EventTheme::HeronRivalry => "heron_rivalry",
             EventTheme::BerryPatch => "berry_patch",
             EventTheme::GrubsUnderLog => "grubs_under_log",
             EventTheme::BeehiveDiscovery => "beehive",
@@ -316,6 +331,8 @@ impl EventTheme {
             EventTheme::WildOnions => "wild_onions",
             EventTheme::TidepoolShellfish => "tidepool_shellfish",
             EventTheme::DiggingRoots => "digging_roots",
+            EventTheme::TreeClimbing => "tree_climbing",
+            EventTheme::RuttingElk => "rutting_elk",
             EventTheme::CaveDiscovery => "cave_discovery",
             EventTheme::FoxFollowing => "fox_following",
             EventTheme::MotherMooseWarning => "mother_moose_warning",
@@ -327,6 +344,8 @@ impl EventTheme {
             EventTheme::CaribouHerd => "caribou_herd",
             EventTheme::DallSheep => "dall_sheep",
             EventTheme::ScenicRest => "scenic_rest",
+            EventTheme::BeachRest => "beach_rest",
+            EventTheme::Stargazing => "stargazing",
             EventTheme::NapInMeadow => "nap_in_meadow",
             EventTheme::WhalesFromShore => "whales_from_shore",
             EventTheme::Aurora => "aurora",
@@ -340,6 +359,7 @@ impl EventTheme {
             EventTheme::WatchingStorm => "watching_storm",
             EventTheme::Waterfall => "waterfall",
             EventTheme::RainUnderTree => "rain_under_tree",
+            EventTheme::WolfKill => "wolf_kill",
             EventTheme::MarmotHunt => "marmot_hunt",
             EventTheme::SnowshoeHare => "snowshoe_hare",
             EventTheme::WeaselEncounter => "weasel_encounter",
@@ -380,8 +400,6 @@ impl EventTheme {
     ) -> Vec<(EventTheme, u32)> {
         let mut pool: Vec<(EventTheme, u32)> = Vec::new();
 
-        let has_seen = |key: &str| event_log.iter().any(|e| e.theme_key == key);
-
         // ── Universal ────────────────────────────────────────────────────────
         pool.push((EventTheme::Thunderstorm, 3));
         pool.push((EventTheme::OtherBear, 5));
@@ -394,14 +412,7 @@ impl EventTheme {
         pool.push((EventTheme::LoneWolf, 3));
         pool.push((EventTheme::DogEncounter, 2));
         pool.push((EventTheme::WolverineEncounter, 3));
-
-        // Follow-ups
-        if has_seen("other_bear") {
-            pool.push((EventTheme::FamiliarBearReturns, 4));
-        }
-        if has_seen("other_cubs") {
-            pool.push((EventTheme::CubsAtPlay, 4));
-        }
+        pool.push((EventTheme::CubsAtPlay, 3));
 
         // ── Season-specific universal ─────────────────────────────────────────
         if season == Season::Spring {
@@ -431,12 +442,14 @@ impl EventTheme {
                 pool.push((EventTheme::OldScratchMarks, 3));
                 pool.push((EventTheme::RiverStandoff, 4));
                 pool.push((EventTheme::BearFight, 3));
+                pool.push((EventTheme::TrophyHunters, 2));
                 if matches!(season, Season::Spring | Season::Summer) {
                     pool.push((EventTheme::MotherWithNewborns, 3));
                 }
             }
             AgeStage::Elder => {
                 pool.push((EventTheme::OldScratchMarks, 3));
+                pool.push((EventTheme::TrophyHunters, 3));
                 pool.push((EventTheme::DisplacedByYoung, 4));
                 pool.push((EventTheme::BearLikeYouOnce, 3));
                 // Bond-gated elder events
@@ -462,6 +475,9 @@ impl EventTheme {
             pool.push((EventTheme::RiverCrossing, 6));
             pool.push((EventTheme::EagleStealsYourCatch, 5));
             pool.push((EventTheme::OtterCompetition, 5));
+            pool.push((EventTheme::HeronRivalry, 4));
+            let waterfall_weight = if matches!(season, Season::Summer | Season::Fall) { 6 } else { 3 };
+            pool.push((EventTheme::WaterfallFishing, waterfall_weight));
 
             if season == Season::Fall {
                 pool.push((EventTheme::SalmonFrenzy, 8));
@@ -504,6 +520,7 @@ impl EventTheme {
             if matches!(season, Season::Summer | Season::Fall) {
                 pool.push((EventTheme::TidepoolShellfish, 4));
             }
+            pool.push((EventTheme::WolfKill, 3));
             pool.push((EventTheme::MarmotHunt, 4));
             pool.push((EventTheme::WeaselEncounter, 4));
             pool.push((EventTheme::DiggingRoots, 6));
@@ -524,8 +541,12 @@ impl EventTheme {
             pool.push((EventTheme::PorcupineQuills, 3));
             pool.push((EventTheme::TidepoolShellfish, 3));
             pool.push((EventTheme::LynxSighting, 1));
+            pool.push((EventTheme::WolfKill, 3));
             pool.push((EventTheme::MarmotHunt, 3));
             pool.push((EventTheme::WeaselEncounter, 3));
+            if matches!(age, AgeStage::Cub | AgeStage::Adolescent) {
+                pool.push((EventTheme::TreeClimbing, 4));
+            }
 
             if bond >= 15.0 {
                 pool.push((EventTheme::FoxFollowing, 4));
@@ -540,6 +561,7 @@ impl EventTheme {
             if season == Season::Fall {
                 pool.push((EventTheme::StormTossedBeach, 4));
                 pool.push((EventTheme::BeachedSeal, 2));
+                pool.push((EventTheme::RuttingElk, 4));
             }
             let hare_weight = match season {
                 Season::Spring => 5,
@@ -600,6 +622,7 @@ impl EventTheme {
     pub fn pool_for_relax(season: Season, bond: f32) -> Vec<(EventTheme, u32)> {
         let mut pool = vec![
             (EventTheme::ScenicRest, 5),
+            (EventTheme::BeachRest, 4),
             (EventTheme::NapInMeadow, 5),
             (EventTheme::Waterfall, 4),
             (EventTheme::RainUnderTree, 4),
@@ -610,7 +633,8 @@ impl EventTheme {
                 pool.push((EventTheme::MigratoryBirds, 4));
                 pool.push((EventTheme::RiverFloat, 3));
                 pool.push((EventTheme::Swimming, 4));
-                pool.push((EventTheme::Aurora, 2));
+                pool.push((EventTheme::Aurora, 4));
+                pool.push((EventTheme::Stargazing, 4));
             }
             Season::Summer => {
                 pool.push((EventTheme::Sunbathing, 6));
@@ -624,7 +648,8 @@ impl EventTheme {
                 pool.push((EventTheme::WatchingStorm, 5));
                 pool.push((EventTheme::Swimming, 2));
                 pool.push((EventTheme::WhalesFromShore, 3));
-                pool.push((EventTheme::Aurora, 3));
+                pool.push((EventTheme::Aurora, 4));
+                pool.push((EventTheme::Stargazing, 4));
             }
             Season::Winter => {}
         }

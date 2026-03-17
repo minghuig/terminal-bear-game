@@ -135,7 +135,7 @@ impl Bear {
         self.fat_reserves -= base_fat_drain + hunger_drain;
 
         // Bond fades without interaction
-        self.bond -= 2.0;
+        self.bond -= 1.0;
 
         self.clamp_stats();
     }

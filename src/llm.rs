@@ -129,7 +129,7 @@ impl OpenAiClient {
 #[derive(Serialize)]
 struct OpenAiRequest {
     model: String,
-    max_tokens: u32,
+    max_completion_tokens: u32,
     messages: Vec<OpenAiMessage>,
 }
 
@@ -160,7 +160,7 @@ impl LlmClient for OpenAiClient {
 
         let request = OpenAiRequest {
             model: self.model.clone(),
-            max_tokens: 512,
+            max_completion_tokens: 512,
             messages: vec![
                 OpenAiMessage {
                     role: "system".to_string(),
@@ -215,12 +215,17 @@ use crate::bear::{AgeStage, Bear};
 use crate::events::EventRecord;
 use crate::time::Season;
 
-pub fn build_relax_prompt(bear: &Bear, season: Season, year: u32, theme_key: &str) -> String {
+pub fn build_relax_prompt(bear: &Bear, season: Season, year: u32, theme_key: &str, follow_up: Option<&str>) -> String {
     let season_desc = match season {
         Season::Spring => "Spring: the world is thawing, cold and fresh.",
         Season::Summer => "Summer: warm, unhurried, the days are long.",
         Season::Fall => "Fall: the air is turning. There's a restlessness underneath the stillness.",
         Season::Winter => "",
+    };
+
+    let follow_up_line = match follow_up {
+        Some(prev) => format!("This is a returning scene — the bear has been here before. Previously: {prev}. Write a natural continuation, not a repeat.\n"),
+        None => String::new(),
     };
 
     format!(
@@ -229,6 +234,7 @@ pub fn build_relax_prompt(bear: &Bear, season: Season, year: u32, theme_key: &st
         {season_desc}\n\
         The bear is taking a moment to rest and just exist.\n\
         THIS scene is about ONLY this one thing: {theme_key}.\n\
+        {follow_up_line}\
         Do not include a title, heading, or label. Begin directly with the narrative.\n\n\
         Write a 3-5 sentence scene of this peaceful moment.\n\
         Second person (\"you\"). Calm, sensory, unhurried — focus on what the bear sees, smells, feels.\n\
@@ -242,7 +248,7 @@ pub fn build_relax_prompt(bear: &Bear, season: Season, year: u32, theme_key: &st
     )
 }
 
-pub fn build_interact_prompt(bear: &Bear, theme_key: &str, choice_style: bool) -> String {
+pub fn build_interact_prompt(bear: &Bear, theme_key: &str, choice_style: bool, follow_up: Option<&str>) -> String {
     let age_desc = match bear.age_stage() {
         AgeStage::Cub => "a tiny, clumsy bear cub — chaotic and adorable",
         AgeStage::Adolescent => "a gangly young bear — enthusiastic, a bit too rough, testing limits",
@@ -283,12 +289,18 @@ pub fn build_interact_prompt(bear: &Bear, theme_key: &str, choice_style: bool) -
         Then on the very last line: [SUMMARY: one sentence in past tense describing what happened]"
     };
 
+    let follow_up_line = match follow_up {
+        Some(prev) => format!("This is a returning moment — you have shared something like this before. Previously: {prev}. Write a natural continuation, not a repeat.\n"),
+        None => String::new(),
+    };
+
     format!(
         "You are narrating a cozy bear game set in coastal Alaska wilderness.\n\
         The bear's name is {name}. It is {age_desc}.\n\
         {bond_desc}\n\
         This is a quiet moment of interaction between the bear and its person.\n\
         THIS scene is about ONLY this one thing: {theme_key}.\n\
+        {follow_up_line}\
         No other animals or events. Stay focused on the bear and the moment.\n\
         Do not include a title, heading, or label. Begin directly with the narrative.\n\n\
         {ending}",
@@ -350,9 +362,9 @@ pub fn build_simple_event_prompt(
     action: &str,
     theme_key: &str,
     past_events: &[EventRecord],
+    follow_up: Option<&str>,
 ) -> String {
-    // Reuse the same context building as the choice version
-    build_event_prompt_with_style(bear, season, year, action, theme_key, past_events, false)
+    build_event_prompt_with_style(bear, season, year, action, theme_key, past_events, false, follow_up)
 }
 
 pub fn build_event_prompt(
@@ -362,8 +374,9 @@ pub fn build_event_prompt(
     action: &str,
     theme_key: &str,
     past_events: &[EventRecord],
+    follow_up: Option<&str>,
 ) -> String {
-    build_event_prompt_with_style(bear, season, year, action, theme_key, past_events, true)
+    build_event_prompt_with_style(bear, season, year, action, theme_key, past_events, true, follow_up)
 }
 
 fn build_event_prompt_with_style(
@@ -374,6 +387,7 @@ fn build_event_prompt_with_style(
     theme_key: &str,
     past_events: &[EventRecord],
     choice_style: bool,
+    follow_up: Option<&str>,
 ) -> String {
     let recent: Vec<String> = past_events
         .iter()
@@ -446,6 +460,11 @@ fn build_event_prompt_with_style(
         Then on the very last line: [SUMMARY: one sentence in past tense describing what happened]"
     };
 
+    let follow_up_line = match follow_up {
+        Some(prev) => format!("This is a follow-up encounter — the bear has experienced this before. Previously: {prev}. Write a natural continuation, not a repeat.\n"),
+        None => String::new(),
+    };
+
     format!(
         "You are narrating a cozy bear game set in coastal Alaska/Kamchatka wilderness.\n\
         The bear's name is {name}. It is {season} of year {year}. The bear is {action_desc}.\n\
@@ -453,6 +472,7 @@ fn build_event_prompt_with_style(
         {season_desc}\n\
         {bond_desc}\n\n\
         THIS event is about ONLY this one thing: {theme_key}.\n\
+        {follow_up_line}\
         Do not mention any other animals, people, or events. Stay focused on this single encounter.\n\
         Do not include a title, heading, or label. Begin directly with the narrative.\n\n\
         {past_context}\n\n\
@@ -461,6 +481,11 @@ fn build_event_prompt_with_style(
         season = season.label(),
         year = year,
     )
+}
+
+/// Find the most recent summary for a given theme key in the event log.
+pub fn find_previous_summary<'a>(event_log: &'a [crate::events::EventRecord], theme_key: &str) -> Option<&'a str> {
+    event_log.iter().rev().find(|e| e.theme_key == theme_key).map(|e| e.summary.as_str())
 }
 
 /// Extract and strip the [SUMMARY: ...] line from LLM output.

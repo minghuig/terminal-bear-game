@@ -2,7 +2,7 @@
 
 A cozy terminal-based virtual pet game where you raise a brown bear through the seasons. Set in the coastal Alaska wilderness.
 
-Built with Rust and [Ratatui](https://github.com/ratatui-org/ratatui).
+Built with Rust and [Ratatui](https://github.com/ratatui-org/ratatui) (and Claude Code).
 
 ## Gameplay
 

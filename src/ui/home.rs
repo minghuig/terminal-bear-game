@@ -8,6 +8,14 @@ use ratatui::{
 use crate::app::App;
 use crate::art::bear_art;
 
+fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
+}
+
 pub fn render_home(app: &App, frame: &mut Frame) {
     let area = frame.area();
 
@@ -48,16 +56,31 @@ pub fn render_home(app: &App, frame: &mut Frame) {
         ])
         .split(rows[1]);
 
-    // Bear art panel
-    let art = bear_art(&app.save.bear.age_stage());
-    let bear_panel = Paragraph::new(art)
+    // Bear art panel (or missing message)
+    let bear_panel = if app.save.bear_missing {
+        Paragraph::new(format!(
+            "\n\n\n\n\n  {} has wandered off.\n\n  {}'ll return when\n  you next take an action.",
+            app.save.bear.name,
+            capitalize(app.save.bear.pronoun.subject()),
+        ))
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(format!(" {} the {} ", app.save.bear.name, app.save.bear.age_stage().label()))
-                .style(Style::default().fg(Color::Yellow)),
+                .title(format!(" {} — Missing ", app.save.bear.name))
+                .style(Style::default().fg(Color::Red)),
         )
-        .alignment(Alignment::Center);
+        .alignment(Alignment::Left)
+    } else {
+        let art = bear_art(&app.save.bear.age_stage());
+        Paragraph::new(art)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(format!(" {} the {} ", app.save.bear.name, app.save.bear.age_stage().label()))
+                    .style(Style::default().fg(Color::Yellow)),
+            )
+            .alignment(Alignment::Center)
+    };
     frame.render_widget(bear_panel, cols[0]);
 
     // Right panel: stats + actions

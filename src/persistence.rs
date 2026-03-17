@@ -24,6 +24,8 @@ pub struct SaveState {
     pub api_key: Option<String>,
     #[serde(default)]
     pub hibernation_ready: bool, // true once fat hits threshold during fall
+    #[serde(default)]
+    pub bear_missing: bool,      // true when hunger hit 0 — bear wandered off
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,6 +47,7 @@ impl SaveState {
             llm_provider: None,
             api_key: None,
             hibernation_ready: false,
+            bear_missing: false,
         }
     }
 
