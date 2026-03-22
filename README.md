@@ -58,6 +58,10 @@ bear_game
 
 The game will prompt you to choose a provider and enter your API key on first launch. You can change it later via `[s]` (Settings) from the home screen. The key is saved locally in `bear_save.json` (gitignored).
 
+## Playing with Claude Code
+
+If you have [tmux](https://github.com/tmux/tmux) installed, Claude Code can play the game autonomously. It can launch the game in a detached tmux session, send keypresses, capture the screen output, and make decisions based on the current stats. A fun way to watch an AI bear-keeper at work!
+
 ## Save File
 
 Progress is auto-saved to `bear_save.json` in the directory where you run the game.

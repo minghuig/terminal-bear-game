@@ -122,8 +122,8 @@ pub fn render_hibernation(app: &App, frame: &mut Frame, success: bool, bond_at_s
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(15),
             Constraint::Min(0),
+            Constraint::Length(2),
         ])
         .split(area);
 
@@ -133,7 +133,7 @@ pub fn render_hibernation(app: &App, frame: &mut Frame, success: bool, bond_at_s
 
     let (season_text, msg) = if success {
         let bond_note = if bond_at_sleep >= 70.0 {
-            format!("Before settling in, {} turned and pressed {}'s nose against your hand.\nThen curled up and was still.", name, name)
+            format!("Before settling in, {} turned and pressed {} nose against your hand.\nThen curled up and was still.", name, app.save.bear.pronoun.possessive())
         } else if bond_at_sleep >= 40.0 {
             format!("{} settled in slowly, glancing toward you once before closing {}'s eyes.", name, app.save.bear.pronoun.possessive())
         } else {
@@ -158,7 +158,8 @@ pub fn render_hibernation(app: &App, frame: &mut Frame, success: bool, bond_at_s
 
     let color = if success { Color::Cyan } else { Color::Red };
 
-    let screen = Paragraph::new(format!("{}\n  {}\n\n{}", sleep_art, season_text, msg))
+    let zzz = if success { "z  z  z" } else { "z . . ." };
+    let screen = Paragraph::new(format!("{}\n{}\n\n  {}\n\n{}", sleep_art, zzz, season_text, msg))
         .alignment(Alignment::Center)
         .style(Style::default().fg(color).add_modifier(Modifier::BOLD));
     frame.render_widget(screen, chunks[0]);
@@ -174,8 +175,6 @@ pub fn render_final_rest(app: &App, frame: &mut Frame) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(25),
-            Constraint::Length(14),
             Constraint::Min(0),
         ])
         .split(area);
@@ -202,21 +201,14 @@ pub fn render_final_rest(app: &App, frame: &mut Frame) {
         bear.age_years,
     );
 
-    let art = r#"
-   ╭━━━━━━━╮
- ╭╯ ─     ─ ╰╮
- │  ░ ─ ─ ░  │   . . .
- │           │
- ╰━━━━━━━━━━╯
+    use crate::bear::AgeStage;
+    let art = crate::art::bear_sleep_art(&AgeStage::Elder);
 
-  ~ A good long life ~
-"#;
-
-    let screen = Paragraph::new(format!("{}\n{}", art, msg))
+    let screen = Paragraph::new(format!("{}\n  ~ A good long life ~\n\n{}", art, msg))
         .alignment(Alignment::Center)
         .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         .wrap(Wrap { trim: false });
-    frame.render_widget(screen, chunks[1]);
+    frame.render_widget(screen, chunks[0]);
 }
 
 pub fn render_game_over(app: &App, frame: &mut Frame) {
