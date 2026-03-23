@@ -133,14 +133,6 @@ fn handle_main_menu(app: &mut App, key: KeyCode) {
                 app.screen = Screen::Setup(SetupStep::Name);
             }
         }
-        KeyCode::Char('c') => {
-            if app.save.bear.name.is_empty() {
-                app.message = Some("No save found. Start a new game with [n].".to_string());
-            } else {
-                app.screen = Screen::Home;
-            }
-        }
-        KeyCode::Char('s') => app.go_to_settings(),
         _ => {}
     }
 }
@@ -197,6 +189,10 @@ fn handle_settings(app: &mut App, key: KeyCode) {
         KeyCode::Char('c') => {
             app.input_buffer.clear();
             app.screen = Screen::ApiKeySetup(ApiKeySetupStep::ChooseProvider);
+        }
+        KeyCode::Char('n') => {
+            app.reset_for_new_game();
+            app.screen = Screen::Setup(SetupStep::Name);
         }
         KeyCode::Esc | KeyCode::Char('q') => app.exit_settings(),
         _ => {}

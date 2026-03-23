@@ -60,7 +60,7 @@ The game will prompt you to choose a provider and enter your API key on first la
 
 ## Playing with Claude Code
 
-If you have [tmux](https://github.com/tmux/tmux) installed, Claude Code can play the game autonomously. It can launch the game in a detached tmux session, send keypresses, capture the screen output, and make decisions based on the current stats. A fun way to watch an AI bear-keeper at work!
+If you have [tmux](https://github.com/tmux/tmux) installed, Claude Code and Codex CLI can play the game autonomously. It can launch the game in a detached tmux session, send keypresses, capture the screen output, and make decisions based on the current stats. A fun way to watch an AI bear-keeper at work!
 
 ## Save File
 

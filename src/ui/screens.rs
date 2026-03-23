@@ -8,30 +8,15 @@ use ratatui::{
 use crate::app::App;
 use crate::art::bear_sleep_art;
 
-pub fn render_main_menu(_app: &App, frame: &mut Frame) {
+pub fn render_main_menu(app: &App, frame: &mut Frame) {
     let area = frame.area();
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(35),
-            Constraint::Length(8),
-            Constraint::Min(0),
-        ])
-        .split(area);
 
-    let art = r#"
-  ╭━━━━━━━╮
-╭╯ ◕     ◕ ╰╮
-│    ▾ ω    │
-│  ━━━━━━━  │
-╰━━━━━━━━━━╯
-    TERMINAL BEAR
-"#;
+    let art = crate::art::ADULT;
 
-    let menu = Paragraph::new(format!("{}\n\n[n] New Game    [c] Continue    [s] Settings    [q] Quit", art))
+    let menu = Paragraph::new(format!("{}\n  TERMINAL BEAR\n\n[n] New Game    [q] Quit", art))
         .alignment(Alignment::Center)
         .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
-    frame.render_widget(menu, chunks[1]);
+    frame.render_widget(menu, area);
 }
 
 pub fn render_dialogue(app: &App, frame: &mut Frame) {

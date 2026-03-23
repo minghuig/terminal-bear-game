@@ -26,6 +26,8 @@ pub struct SaveState {
     pub hibernation_ready: bool, // true once fat hits threshold during fall
     #[serde(default)]
     pub bear_missing_turns: u8,  // >0 when bear wandered off; counts down to 0
+    #[serde(default)]
+    pub game_over: bool,         // true after FinalRest; prompts new game on next launch
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,6 +50,7 @@ impl SaveState {
             api_key: None,
             hibernation_ready: false,
             bear_missing_turns: 0,
+            game_over: false,
         }
     }
 

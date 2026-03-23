@@ -109,7 +109,10 @@ impl App {
         let mut app = App::new();
         if let Some(save) = SaveState::load()? {
             app.save = save;
-            if app.save.api_key.is_some() && app.save.llm_provider.is_some() {
+            if app.save.game_over {
+                // Bear has lived its full life — prompt for a new game on next launch
+                app.screen = Screen::MainMenu;
+            } else if app.save.api_key.is_some() && app.save.llm_provider.is_some() {
                 app.rebuild_llm();
                 app.screen = Screen::Home;
             } else {
@@ -714,6 +717,7 @@ impl App {
         // At age 25, the bear doesn't wake up
         if self.save.bear.age_years >= 20 {
             self.save.hibernation_ready = false;
+            self.save.game_over = true;
             self.auto_save();
             self.screen = Screen::FinalRest;
             return;

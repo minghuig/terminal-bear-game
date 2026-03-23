@@ -144,7 +144,7 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
     }).unwrap_or_else(|| "not set".to_string());
 
     let content = format!(
-        "Provider:  {}\nAPI Key:   {}\n\n[c] Change provider / key\n[Esc] Back",
+        "Provider:  {}\nAPI Key:   {}\n\n[c] Change provider / key\n[n] New game\n[Esc] Back",
         provider_str, masked_key
     );
 
