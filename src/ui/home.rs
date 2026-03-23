@@ -131,7 +131,7 @@ fn render_stats(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) {
     let season_hint = season_goal_line(bear.fat_reserves, time.season, time.day, app.save.hibernation_ready);
 
     let stats = format!(
-        "Hunger:       {}\nEnergy:       {}\nFat reserves: {}\nBond:         {}\n\nFood:          {} / 20\nFishing skill: {:.0}%\n\n{}",
+        "Hunger:       {}\nEnergy:       {}\nFat reserves: {}\nBond:         {}\n\nFood:          {} / 10\nFishing skill: {:.0}%\n\n{}",
         stat_bar(bear.hunger, 100.0),
         stat_bar(bear.energy, 100.0),
         stat_bar(bear.fat_reserves, 200.0),

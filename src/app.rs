@@ -54,7 +54,7 @@ pub struct PendingEventResult {
 
 pub enum PendingResult {
     Event(PendingEventResult),
-    Dialogue { player: String, bear: String, bond_delta: f32 },
+    Dialogue { player: String, bear: String, bond_delta: f32, bond_applies: bool },
 }
 
 pub struct App {
@@ -72,6 +72,7 @@ pub struct App {
     pub input_buffer: String,
     pub talking: bool,
     pub message: Option<String>,
+    pub last_talk_capped: bool,  // true when last talk gave no bond due to daily cap
     pub event_text: Option<String>,
     pub event_choices: Option<[EventChoice; 2]>,  // pending choices for current event
     pub event_choice_made: bool,                   // true = showing outcome, false = showing choices
@@ -95,6 +96,7 @@ impl App {
             input_buffer: String::new(),
             talking: false,
             message: None,
+            last_talk_capped: false,
             event_text: None,
             event_choices: None,
             event_choice_made: false,
@@ -200,8 +202,8 @@ impl App {
             self.loading = false;
             match result {
                 Ok(PendingResult::Event(e)) => self.apply_event_result(e),
-                Ok(PendingResult::Dialogue { player, bear, bond_delta }) => {
-                    self.apply_dialogue_result(player, bear, bond_delta)
+                Ok(PendingResult::Dialogue { player, bear, bond_delta, bond_applies }) => {
+                    self.apply_dialogue_result(player, bear, bond_delta, bond_applies)
                 }
                 Err(e) => {
                     self.message = Some(format!("Error: {e}"));
@@ -347,8 +349,11 @@ impl App {
         self.talking = false;
         self.loading = true;
 
+        let bond_applies = self.save.talks_today < 2;
+        // Increment only on success, in apply_dialogue_result
+
         let llm = Arc::clone(&self.llm);
-        let prompt = build_dialogue_prompt(&self.save.bear, &player_message);
+        let prompt = build_dialogue_prompt(&self.save.bear, self.save.time.season, &player_message);
 
         let (tx, rx) = mpsc::channel();
         self.pending = Some(rx);
@@ -359,14 +364,19 @@ impl App {
                 PendingResult::Dialogue {
                     player: player_message,
                     bear: bear_text,
-                    bond_delta,
+                    bond_delta: if bond_applies { bond_delta } else { 0.0 },
+                    bond_applies,
                 }
             });
             let _ = tx.send(result);
         });
     }
 
-    fn apply_dialogue_result(&mut self, player: String, bear_response: String, bond_delta: f32) {
+    fn apply_dialogue_result(&mut self, player: String, bear_response: String, bond_delta: f32, bond_applies: bool) {
+        if bond_applies {
+            self.save.talks_today += 1;
+        }
+        self.last_talk_capped = !bond_applies;
         self.save.dialogue_log.push(DialogueEntry {
             player,
             bear: bear_response,
@@ -586,7 +596,7 @@ impl App {
             self.save.bear.bond += deltas.bond;
             self.save.bear.energy += deltas.energy;
             self.save.bear.fat_reserves += fat;
-            self.save.food_inventory = (self.save.food_inventory + food).min(20);
+            self.save.food_inventory = (self.save.food_inventory + food).min(10);
             self.save.bear.clamp_stats();
 
             let mut effects: Vec<String> = Vec::new();
@@ -646,7 +656,7 @@ impl App {
         } else {
             food_base
         };
-        self.save.food_inventory = (self.save.food_inventory + food).min(20);
+        self.save.food_inventory = (self.save.food_inventory + food).min(10);
 
         // Build a visible summary of what changed
         let mut effects: Vec<String> = Vec::new();
@@ -682,6 +692,8 @@ impl App {
             self.save.hibernation_ready = true;
         }
 
+        self.save.talks_today = 0;
+
         // Skip stat decay while bear is away — they're fending for themselves
         if self.save.bear_missing_turns == 0 {
             self.save.bear.daily_decay(self.save.time.season);
@@ -713,6 +725,7 @@ impl App {
     }
 
     fn do_hibernation(&mut self, success: bool) {
+        self.message = None;
         self.save.bear_missing_turns = 0; // bear comes home for winter regardless
         // At age 25, the bear doesn't wake up
         if self.save.bear.age_years >= 20 {

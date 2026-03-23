@@ -28,6 +28,8 @@ pub struct SaveState {
     pub bear_missing_turns: u8,  // >0 when bear wandered off; counts down to 0
     #[serde(default)]
     pub game_over: bool,         // true after FinalRest; prompts new game on next launch
+    #[serde(default)]
+    pub talks_today: u32,        // bond only applies for first 2 talks per day
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +53,7 @@ impl SaveState {
             hibernation_ready: false,
             bear_missing_turns: 0,
             game_over: false,
+            talks_today: 0,
         }
     }
 

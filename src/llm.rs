@@ -315,7 +315,7 @@ pub fn build_interact_prompt(bear: &Bear, theme_key: &str, choice_style: bool, f
     )
 }
 
-pub fn build_dialogue_prompt(bear: &Bear, player_message: &str) -> String {
+pub fn build_dialogue_prompt(bear: &Bear, season: Season, player_message: &str) -> String {
     let stage = bear.age_stage();
     let voice = match stage {
         AgeStage::Cub => "You are a very young bear cub. Speak in very short, simple sentences. Almost like a toddler bear. Very food-focused.",
@@ -324,14 +324,18 @@ pub fn build_dialogue_prompt(bear: &Bear, player_message: &str) -> String {
         AgeStage::Elder => "You are an old wise bear. Still simple thoughts, but a quiet dignity. Occasional weary humor.",
     };
 
-    let hunger_note = if bear.is_hungry() {
-        " You are quite hungry and it is on your mind."
+    let hunger_note = if bear.hunger < 25.0 {
+        " You are very hungry. Food is all you can think about."
+    } else if bear.hunger < 50.0 {
+        " You are a bit hungry and wouldn't mind eating."
     } else {
         ""
     };
 
-    let tired_note = if bear.is_tired() {
-        " You are tired."
+    let tired_note = if bear.energy < 25.0 {
+        " You are exhausted and want to sleep."
+    } else if bear.energy < 50.0 {
+        " You are a little tired."
     } else {
         ""
     };
@@ -346,8 +350,15 @@ pub fn build_dialogue_prompt(bear: &Bear, player_message: &str) -> String {
         " This human is still somewhat new to you. You are cautious but curious."
     };
 
+    let season_note = match season {
+        Season::Spring => " It is spring — you just woke from a long sleep. The world smells new and alive.",
+        Season::Summer => " It is summer. Long warm days, fish running in the rivers.",
+        Season::Fall => " It is fall. There is a pull toward eating more, moving more. Something is coming.",
+        Season::Winter => "",
+    };
+
     format!(
-        "{voice}{hunger_note}{tired_note}{bond_note}\n\
+        "{voice}{season_note}{hunger_note}{tired_note}{bond_note}\n\
         Your name is {}. Respond to what your human companion says. \
         Keep it to 1-3 short sentences. Bear-brained: think about food, sleep, smells, territory, your human. \
         Not philosophical. Not clever. Just bear thoughts.\n\n\
@@ -411,8 +422,8 @@ fn build_event_prompt_with_style(
         )
     };
     let action_desc = match action {
-        "fish" => "fishing at the river",
-        "forage" => "foraging in the forest/meadow",
+        "fish" => "fishing at the river — keep the scene grounded at or near the water",
+        "forage" => "foraging in the forest, meadow, or beach",
         "explore" => "exploring the territory",
         _ => action,
     };
@@ -450,7 +461,7 @@ fn build_event_prompt_with_style(
         [B_RESULT: <one sentence outcome> | Energy +5, Fat +15, Food +0]\n\n\
         Rules:\n\
         - Choices must have meaningfully different outcomes (any combo of good/neutral/bad is fine)\n\
-        - Food: 0–8 items. 0 if no food gathered. Be generous on successful foraging/fishing.\n\
+        - Food: 0–4 items. 0 if no food gathered. Be generous on successful foraging/fishing.\n\
         - Fat: 0–15. Use for food-related events. 0 for non-food events.\n\
         - Energy: -15 to +5. Actions are tiring but not punishing.\n\
         - Only use: Energy, Fat, Food. Do NOT include Bond.\n\
@@ -459,8 +470,9 @@ fn build_event_prompt_with_style(
     } else {
         "Write a 3-5 sentence narrative of this event. \
         Second person (\"you\"). Cozy, grounded, nature-focused. \
+        Do NOT ask 'What do you do?' — just narrate the event through to its conclusion.\n\
         End with a single bracketed line like: [Energy -10, Fat +5, Food +3]\n\
-        Food: 0–8 items. 0 if no food gathered. Be generous on successful foraging/fishing.\n\
+        Food: 0–4 items. 0 if no food gathered. Be generous on successful foraging/fishing.\n\
         Fat: 0–15. Use for food-related events. 0 for non-food events.\n\
         Energy: -15 to +5. Actions are tiring but not punishing.\n\
         Only use: Energy, Fat, Food. Do NOT include Bond or Hunger.\n\
@@ -501,10 +513,15 @@ pub fn extract_summary(raw: &str) -> (String, String) {
     let fallback = "Something happened.".to_string();
     for line in raw.lines().rev() {
         let trimmed = line.trim();
-        if let Some(inner) = trimmed.strip_prefix("[SUMMARY:").and_then(|s| s.strip_suffix(']')) {
-            let summary = inner.trim().to_string();
+        let upper = trimmed.to_uppercase();
+        if let Some(after) = upper.strip_prefix("[SUMMARY:") {
+            // Extract the inner text from the original (not uppercased) line
+            let inner_raw = &trimmed[("[SUMMARY:").len()..];
+            let inner = inner_raw.trim_end_matches(']').trim().to_string();
+            let _ = after; // used only for the prefix check
+            let summary = if inner.is_empty() { fallback } else { inner };
             let text = raw[..raw.rfind(trimmed).unwrap_or(raw.len())].trim_end().to_string();
-            return (text, if summary.is_empty() { fallback } else { summary });
+            return (text, summary);
         }
     }
     (raw.trim().to_string(), fallback)

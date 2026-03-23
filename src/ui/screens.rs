@@ -48,7 +48,12 @@ pub fn render_dialogue(app: &App, frame: &mut Frame) {
         .style(Style::default().fg(Color::White));
     frame.render_widget(dialogue, chunks[1]);
 
-    let hint = Paragraph::new(" [Enter / Esc] Back")
+    let hint_text = if app.last_talk_capped {
+        " [Enter / Esc] Back    (talked twice today — no bond boost)"
+    } else {
+        " [Enter / Esc] Back"
+    };
+    let hint = Paragraph::new(hint_text)
         .style(Style::default().fg(Color::DarkGray));
     frame.render_widget(hint, chunks[2]);
 }
@@ -57,7 +62,7 @@ pub fn render_event(app: &App, frame: &mut Frame) {
     let area = frame.area();
 
     let has_choices = app.event_choices.is_some();
-    let hint_height = if has_choices { 5 } else { 2 };
+    let hint_height = if has_choices { 8 } else { 2 };
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -92,7 +97,8 @@ pub fn render_event(app: &App, frame: &mut Frame) {
         );
         let choice_widget = Paragraph::new(choice_text)
             .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
-            .block(Block::default().borders(Borders::TOP));
+            .block(Block::default().borders(Borders::TOP))
+            .wrap(Wrap { trim: false });
         frame.render_widget(choice_widget, chunks[2]);
     } else {
         // Outcome shown or no choices — just dismiss hint
@@ -120,7 +126,7 @@ pub fn render_hibernation(app: &App, frame: &mut Frame, success: bool, bond_at_s
         let bond_note = if bond_at_sleep >= 70.0 {
             format!("Before settling in, {} turned and pressed {} nose against your hand.\nThen curled up and was still.", name, app.save.bear.pronoun.possessive())
         } else if bond_at_sleep >= 40.0 {
-            format!("{} settled in slowly, glancing toward you once before closing {}'s eyes.", name, app.save.bear.pronoun.possessive())
+            format!("{} settled in slowly, glancing toward you once before closing {} eyes.", name, app.save.bear.pronoun.possessive())
         } else {
             format!("{} found a hollow and disappeared inside without ceremony.", name)
         };
